@@ -211,6 +211,7 @@ class mainWindow(wx.Frame):
 		else:
 			pass
 		dlg.Destroy()
+		self.Destroy()
 		
 app = wx.App(False)
 frame = mainWindow(None)
