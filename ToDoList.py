@@ -1,4 +1,5 @@
 import wx
+import datetime
 
 class mainWindow(wx.Frame):
 	def __init__(self, parent):
@@ -13,6 +14,9 @@ class mainWindow(wx.Frame):
 		
 		menu = wx.Menu()
 		
+		save_list = menu.Append(wx.ID_ANY, "Save the List", "Save the Current List")
+		self.Bind(wx.EVT_MENU, self.OnSaveList, save_list)
+		
 		clear_list = menu.Append(wx.ID_ANY, "Clear the List", "Clear the List of All Entries")
 		self.Bind(wx.EVT_MENU, self.OnClearList, clear_list)
 		
@@ -25,11 +29,21 @@ class mainWindow(wx.Frame):
 		self.tasks.InsertColumn(0, "Priority")
 		self.tasks.InsertColumn(1, "Tasks", width = wx.LIST_AUTOSIZE_USEHEADER)
 		
-		self.list = open("Tasks.txt", 'r+').read().split('\n')
-		for i in range(len(self.list)):
-			self.tasks.InsertItem(i, str(i + 1))
-			self.tasks.SetItem(i, 1, self.list[i])
-		self.list_length = len(self.list)
+		try:
+			self.list = open("Current_Tasks.txt", 'r+').read().split('\n')
+			for i in range(len(self.list)):
+				self.tasks.InsertItem(i, str(i + 1))
+				self.tasks.SetItem(i, 1, self.list[i])
+			self.list_length = len(self.list)
+		except FileNotFoundError:
+			place_list = open("Current_Tasks.txt", 'w+')
+			place_list.write("Create, delete, and complete tasks with the buttons below")
+			self.tasks.InsertItem(0, "1")
+			self.tasks.SetItem(0, 1, "Create, delete, edit, and complete tasks with the buttons below.")
+			self.list_length = 1
+		
+		#Creating the close event
+		self.Bind(wx.EVT_CLOSE, self.OnClose)
 		
 		#Creating the bottom panel buttons
 		self.AddNewEntry = wx.Button(self.panel, wx.ID_ANY, "Add a New Entry To The List", size = (250, 30))
@@ -71,7 +85,16 @@ class mainWindow(wx.Frame):
 		self.SetMinSize(self.GetSize())
 	
 	def OnClearList(self, event):
-		pass
+		for i in range(self.list_length):
+			self.tasks.DeleteItem(i)
+		
+	def OnSaveList(self, event):
+		list = open("Current_Tasks.txt", 'w')
+		entries = []
+		for i in range(0, self.list_length):
+			entries.append(self.tasks.GetItemText(i, 1))
+		list.write('\n'.join(entries))
+		list.close()
 		
 	def OnNewEntry(self, event):
 		dlg = wx.TextEntryDialog(self.panel, "Enter A New Task:", "Enter A New Task:")
@@ -83,20 +106,112 @@ class mainWindow(wx.Frame):
 		self.list_length += 1
 		
 	def OnEditEntry(self, event):
-		pass
+		pos = self.tasks.GetFirstSelected()
+		if pos == -1:
+			dlg = wx.MessageDialog(self.panel, "Please select an item to edit.", "Error", style = wx.OK)
+			dlg.ShowModal()
+			dlg.Destroy()
+		else:
+			dlg = wx.TextEntryDialog(self.panel, "Enter the task:", "Editing Task", value = self.tasks.GetItemText(pos, 1), style = wx.OK|wx.CANCEL)
+			choice = dlg.ShowModal()
+			if choice == wx.ID_OK:
+				self.tasks.SetItem(pos, 1, dlg.GetValue())
+			else:
+				pass
+			dlg.Destroy()
 		
 	def OnDeleteEntry(self, event):
-		pass
+		pos = self.tasks.GetFirstSelected()
+		if pos == -1:
+			dlg = wx.MessageDialog(self.panel, "Please select an item to delete.", "Error", style = wx.OK)
+			dlg.ShowModal()
+			dlg.Destroy()
+		else:
+			dlg = wx.MessageDialog(self.panel, "Are you sure you want to delete the selected task?", "Confirmation", style = wx.OK|wx.CANCEL)
+			choice = dlg.ShowModal()
+			if choice == wx.ID_OK:
+				self.tasks.DeleteItem(pos)
+				self.list_length -= 1
+				for i in range(pos, self.list_length):
+					self.tasks.SetItem(i, 0, str(i+1))
+			else:
+				pass
+			dlg.Destroy()
 		
 	def OnCompleteEntry(self, event):
-		pass
-		
+		pos = self.tasks.GetFirstSelected()
+		if pos == -1:
+			dlg = wx.MessageDialog(self.panel, "Please select an item to delete.", "Error", style = wx.OK)
+			dlg.ShowModal()
+			dlg.Destroy()
+		else:
+			dlg = wx.MessageDialog(self.panel, "Are you sure you want to complete the selected task?", "Confirmation", style = wx.OK|wx.CANCEL)
+			choice = dlg.ShowModal()
+			if choice == wx.ID_OK:
+				try:
+					complete = open("Completed_Tasks.txt", "r+")
+				except FileNotFoundError:
+					complete = open("Completed_Tasks.txt", "w+")
+					complete.write("Year-Day-Month Task")
+				complete.write("\n" + str(datetime.date.today()) + " " + self.tasks.GetItemText(pos, 1))
+				self.tasks.DeleteItem(pos)
+				self.list_length -= 1
+				for i in range(pos, self.list_length):
+					self.tasks.SetItem(i, 0, str(i+1))
+				list = open("Current_Tasks.txt", 'w')
+				entries = []
+				for i in range(0, self.list_length):
+					entries.append(self.tasks.GetItemText(i, 1))
+				list.write('\n'.join(entries))
+				list.close()
+			else:
+				pass
+			dlg.Destroy()
+			
 	def OnMovePriorityUp(self, event):
-		pass
-		
-	def OnMovePriorityDown(self, event):
-		pass
+		pos = self.tasks.GetFirstSelected()
+		if pos == -1:
+			dlg = wx.MessageDialog(self.panel, "Please select an item to delete.", "Error", style = wx.OK)
+			dlg.ShowModal()
+			dlg.Destroy()
+		elif pos == 0:
+			dlg = wx.MessageDialog(self.panel, "Task is already at the top.", "Error", style = wx.OK)
+			dlg.ShowModal()
+			dlg.Destroy()
+		else:
+			task = self.tasks.GetItemText(pos, 1)
+			self.tasks.SetItem(pos, 1, self.tasks.GetItemText(pos - 1, 1))
+			self.tasks.SetItem(pos - 1, 1, task)
 
+	def OnMovePriorityDown(self, event):
+		pos = self.tasks.GetFirstSelected()
+		if pos == -1:
+			dlg = wx.MessageDialog(self.panel, "Please select an item to delete.", "Error", style = wx.OK)
+			dlg.ShowModal()
+			dlg.Destroy()
+		elif pos == self.list_length - 1:
+			dlg = wx.MessageDialog(self.panel, "Task is already at the bottom.", "Error", style = wx.OK)
+			dlg.ShowModal()
+			dlg.Destroy()
+		else:
+			task = self.tasks.GetItemText(pos, 1)
+			self.tasks.SetItem(pos, 1, self.tasks.GetItemText(pos + 1, 1))
+			self.tasks.SetItem(pos + 1, 1, task)
+			
+	def OnClose(self, event):
+		dlg = wx.MessageDialog(self.panel, "Do you want to save the list?", "Confirmation", style = wx.OK|wx.CANCEL)
+		choice = dlg.ShowModal()
+		if choice == wx.ID_OK:
+			list = open("Current_Tasks.txt", 'w')
+			entries = []
+			for i in range(0, self.list_length):
+				entries.append(self.tasks.GetItemText(i, 1))
+			list.write('\n'.join(entries))
+			list.close()
+		else:
+			pass
+		dlg.Destroy()
+		
 app = wx.App(False)
 frame = mainWindow(None)
 app.MainLoop()
