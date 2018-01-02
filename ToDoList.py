@@ -86,7 +86,7 @@ class mainWindow(wx.Frame):
 	
 	def OnClearList(self, event):
 		for i in range(self.list_length):
-			self.tasks.DeleteItem(i)
+			self.tasks.DeleteItem(0)
 		
 	def OnSaveList(self, event):
 		list = open("Current_Tasks.txt", 'w')
